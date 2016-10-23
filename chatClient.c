@@ -5,13 +5,32 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h> 
-#define USAGE "chatclient [host name] [host port]"
+#define USAGE "chatClient [host name] [host port]"
+#define MAX_MESSAGE_LENGTH 500
 
 // general error function
 void error(const char *msg) {
   printf("Client: ");
   printf("%s\n", msg);
   exit(1);
+}
+
+// general function for reading data from the socket
+char *read_from_socket(int socket) {
+  int result;
+  char *temp_buffer = malloc(sizeof (char) *MAX_MESSAGE_LENGTH);
+
+  result = read(socket, temp_buffer, MAX_MESSAGE_LENGTH);
+  if(result > 1) return temp_buffer;
+  else error("Error reading from socket");
+}
+
+// general function for writing data to the socket
+int write_to_socket(int socket, unsigned int message_length, void* message) {
+  int result;
+
+  result = write(socket, message, message_length);
+  return result;
 }
 
 int main(int argc, char *argv[])
@@ -35,5 +54,6 @@ int main(int argc, char *argv[])
   status = connect(sockfd, response->ai_addr, response->ai_addrlen);
 
   if(status == -1) error("Error connecting to socket.");
-  else write(sockfd, "Hello World!", 12);
+  write_to_socket(sockfd, 12, "Hello World!");
+  printf("From the server: %s\n", read_from_socket(sockfd));
 }
