@@ -33,8 +33,26 @@ int write_to_socket(int socket, unsigned int message_length, void* message) {
   return result;
 }
 
+// function to get message and length from user
+void get_message_from_user(char *buff) {
+  printf("> ");
+  fgets(buff, MAX_MESSAGE_LENGTH, stdin);
+  buff[strlen(buff)-1] = '\0';
+}
+
+void get_handle(char *buff) {
+  size_t size = MAX_MESSAGE_LENGTH;
+  printf("What is your handle: ");
+  fgets(buff, size, stdin);
+  printf("TEST\n");
+}
+
 int main(int argc, char *argv[])
 {
+  char *reply_from_server = malloc(MAX_MESSAGE_LENGTH + 1);
+  char *message_to_send = malloc(MAX_MESSAGE_LENGTH + 1);
+  char *handle = malloc(MAX_MESSAGE_LENGTH + 1);
+  unsigned int message_length;
   
   if(argc < 3) {
     error(USAGE);
@@ -54,6 +72,15 @@ int main(int argc, char *argv[])
   status = connect(sockfd, response->ai_addr, response->ai_addrlen);
 
   if(status == -1) error("Error connecting to socket.");
-  write_to_socket(sockfd, 12, "Hello World!");
-  printf("From the server: %s\n", read_from_socket(sockfd));
+
+  while(1) {
+    if(strlen(handle) == 0) get_handle(handle);
+    get_message_from_user(message_to_send);
+    message_length = strlen(message_to_send);
+    printf("%s: %d", message_to_send, message_length);
+    write_to_socket(sockfd, message_length, message_to_send);
+    reply_from_server = read_from_socket(sockfd);
+    printf("From the server: %s\n", reply_from_server);
+    
+  }
 }

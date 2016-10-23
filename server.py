@@ -18,8 +18,9 @@ def main():
 		if not data:
 			break
 
-		print("{0}> {1}".format(handle, data))
-		connection.sendall(data)
+		print("{0}: {1}".format(handle, data))
+		reply = raw_input('> ')
+		connection.sendall(reply)
 		connection.close()
 
 main()
