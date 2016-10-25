@@ -20,7 +20,11 @@ def main():
 
 		print("{0}: {1}".format(handle, data))
 		reply = raw_input('> ')
-		connection.sendall(reply)
-		connection.close()
+		
+		if reply == '\quit':
+			connection.close()
+			break;
+		else:
+			connection.sendall(reply)
 
 main()

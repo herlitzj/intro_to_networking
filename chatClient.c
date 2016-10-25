@@ -20,8 +20,10 @@ char *read_from_socket(int socket) {
   int result;
   char *temp_buffer = malloc(sizeof (char) *MAX_MESSAGE_LENGTH);
 
-  result = read(socket, temp_buffer, MAX_MESSAGE_LENGTH);
+  result = recv(socket, temp_buffer, MAX_MESSAGE_LENGTH, 0);
+  printf("BUFFER CONTENT: %s, MESSAGE LENGTH: %d\n", temp_buffer, result);
   if(result > 1) return temp_buffer;
+  else if(result == 0) error("Connection closed by server");
   else error("Error reading from socket");
 }
 
@@ -29,7 +31,7 @@ char *read_from_socket(int socket) {
 int write_to_socket(int socket, unsigned int message_length, void* message) {
   int result;
 
-  result = write(socket, message, message_length);
+  result = send(socket, message, message_length, 0);
   return result;
 }
 
@@ -49,7 +51,6 @@ void get_handle(char *buff) {
 
 int main(int argc, char *argv[])
 {
-  char *reply_from_server = malloc(MAX_MESSAGE_LENGTH + 1);
   char *message_to_send = malloc(MAX_MESSAGE_LENGTH + 1);
   char *handle = malloc(MAX_MESSAGE_LENGTH + 1);
   unsigned int message_length;
@@ -70,17 +71,17 @@ int main(int argc, char *argv[])
   sockfd = socket(response->ai_family, response->ai_socktype, response->ai_protocol);
 
   status = connect(sockfd, response->ai_addr, response->ai_addrlen);
-
   if(status == -1) error("Error connecting to socket.");
 
   while(1) {
+    char *reply_from_server = malloc(MAX_MESSAGE_LENGTH + 1);
     if(strlen(handle) == 0) get_handle(handle);
     get_message_from_user(message_to_send);
     message_length = strlen(message_to_send);
-    printf("%s: %d", message_to_send, message_length);
+    printf("MESSAGE TO SEND %s: %d\n", message_to_send, message_length);
     write_to_socket(sockfd, message_length, message_to_send);
     reply_from_server = read_from_socket(sockfd);
     printf("From the server: %s\n", reply_from_server);
-    
+    fflush(stdout);  
   }
 }
