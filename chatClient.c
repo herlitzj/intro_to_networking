@@ -21,7 +21,6 @@ char *read_from_socket(int socket) {
   char *temp_buffer = malloc(sizeof (char) *MAX_MESSAGE_LENGTH);
 
   result = recv(socket, temp_buffer, MAX_MESSAGE_LENGTH, 0);
-  printf("BUFFER CONTENT: %s, MESSAGE LENGTH: %d\n", temp_buffer, result);
   if(result > 1) return temp_buffer;
   else if(result == 0) error("Connection closed by server");
   else error("Error reading from socket");
@@ -30,7 +29,6 @@ char *read_from_socket(int socket) {
 // general function for writing data to the socket
 int write_to_socket(int socket, unsigned int message_length, void* message) {
   int result;
-
   result = send(socket, message, message_length, 0);
   return result;
 }
@@ -46,13 +44,13 @@ void get_handle(char *buff) {
   size_t size = MAX_MESSAGE_LENGTH;
   printf("What is your handle: ");
   fgets(buff, size, stdin);
-  printf("TEST\n");
 }
 
 int main(int argc, char *argv[])
 {
   char *message_to_send = malloc(MAX_MESSAGE_LENGTH + 1);
   char *handle = malloc(MAX_MESSAGE_LENGTH + 1);
+  char *server_handle = malloc(MAX_MESSAGE_LENGTH + 1);
   unsigned int message_length;
   
   if(argc < 3) {
@@ -72,16 +70,28 @@ int main(int argc, char *argv[])
 
   status = connect(sockfd, response->ai_addr, response->ai_addrlen);
   if(status == -1) error("Error connecting to socket.");
+  else {
+    get_handle(handle);
+    write_to_socket(sockfd, strlen(handle), handle);
+    server_handle = read_from_socket(sockfd);
+  }
 
   while(1) {
     char *reply_from_server = malloc(MAX_MESSAGE_LENGTH + 1);
-    if(strlen(handle) == 0) get_handle(handle);
     get_message_from_user(message_to_send);
     message_length = strlen(message_to_send);
-    printf("MESSAGE TO SEND %s: %d\n", message_to_send, message_length);
-    write_to_socket(sockfd, message_length, message_to_send);
-    reply_from_server = read_from_socket(sockfd);
-    printf("From the server: %s\n", reply_from_server);
-    fflush(stdout);  
+
+    if(strcmp(message_to_send, "\\quit") == 0) {
+      printf("Connection closed\n");
+      close(sockfd);
+      break;
+    } else {
+      write_to_socket(sockfd, message_length, message_to_send);
+      reply_from_server = read_from_socket(sockfd);
+      printf("%s: %s\n", server_handle, reply_from_server);
+      fflush(stdout);  
+    }
   }
+
+  return 0;
 }
