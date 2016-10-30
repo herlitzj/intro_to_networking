@@ -13,31 +13,34 @@ def main():
 	connection = None
 	address = None
 	client_handle = None
+	data = None
 	
-	print('The server is ready to receive')
 	
 	while 1:
-
-		if connection is None:
-			connection, address = server.accept()
-			client_handle = connection.recv(MAX_MESSAGE_LENGTH).rstrip()
-			connection.sendall(HANDLE)
-			print('Connection made by {0} from {1} on port {2}'.format(client_handle, address[0], address[1]))
-
-
-		data = connection.recv(MAX_MESSAGE_LENGTH)
-		
-		if not data:
-			print("Connection closed by {0}".format(client_handle))
-			break
-
-		print("{0}: {1}".format(client_handle, data))
-		reply = raw_input('> ')
-		
-		if reply == '\quit':
-			connection.close()
-			break;
-		else:
-			connection.sendall(reply)
+		try:
+			if connection is None:
+				print('The server is ready to receive')
+				connection, address = server.accept()
+				client_handle = connection.recv(MAX_MESSAGE_LENGTH).rstrip()
+				connection.sendall(HANDLE)
+				print('Connection made by {0} from {1} on port {2}'.format(client_handle, address[0], address[1]))
+			else:
+				data = connection.recv(MAX_MESSAGE_LENGTH)
+				if not data:
+					print("Connection closed by {0}".format(client_handle))
+					connection.close()
+					connection = None
+				else:
+					print("{0}: {1}".format(client_handle, data))
+					reply = raw_input('> ')
+					
+					if reply == '\quit':
+						connection.close()
+						connection = None
+					else:
+						connection.sendall(reply)
+		except KeyboardInterrupt:
+			print("\nExiting Server")
+			sys.exit()	
 
 main()
