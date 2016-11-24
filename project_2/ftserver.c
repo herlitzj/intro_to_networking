@@ -4,9 +4,10 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <dirent.h>
 #include <netdb.h> 
 #define USAGE "ftServer [server port]"
-#define MAX_MESSAGE_LENGTH 500
+#define MAX_MESSAGE_LENGTH 2048
 #define BACKLOG 10
 
 // general error function
@@ -34,18 +35,34 @@ int write_to_socket(int socket, unsigned int message_length, void* message) {
   return result;
 }
 
-// function to get message and length from user
-void get_message_from_user(char *buff) {
-  printf("> ");
-  fgets(buff, MAX_MESSAGE_LENGTH, stdin);
-  buff[strlen(buff)-1] = '\0';
+int send_directory_listing(int socket) {
+  DIR *dp;
+  struct dirent *ep;     
+  dp = opendir ("./");
+
+  if (dp != NULL)
+  {
+    while (ep = readdir (dp)) {
+      // puts (ep->d_name);
+      char *temp_buffer = malloc(sizeof (char) *MAX_MESSAGE_LENGTH);
+      temp_buffer = strcat(ep->d_name, "\n");
+      write_to_socket(socket, strlen(temp_buffer), temp_buffer);
+      // write_to_socket(socket, strlen("\n"), "\n");
+    }
+
+    (void) closedir (dp);
+    return 0;
+  }
+  else
+    return 1;
+    // error("Couldn't open the directory");
 }
 
-void get_handle(char *buff) {
-  size_t size = MAX_MESSAGE_LENGTH;
-  printf("What is your handle: ");
-  fgets(buff, size, stdin);
-}
+// int send_directory_listing(int socket) {
+//   char buffer[MAX_MESSAGE_LENGTH];
+//   get_directory_listing(buffer);
+//   return 0;
+// }
 
 int main(int argc, char *argv[]) {
   pid_t pid, wpid;
@@ -56,7 +73,6 @@ int main(int argc, char *argv[]) {
   if (argc < 2) {
     error(USAGE);
   }
-
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0) error("Error opening socket");
@@ -85,8 +101,20 @@ int main(int argc, char *argv[]) {
       error("Error forking child process");
     } else if (pid == 0) { // handle the child fork
 
-      // deal with connection requests
-      
+      printf("SOMEONE CONNECTED\n");
+
+      if(strcmp(read_from_socket(newsockfd), "-l") == 0) {
+        
+        if(send_directory_listing(newsockfd) == 0) {
+          write_to_socket(newsockfd, strlen("200 SUCCESS"), "200 SUCCESS");
+        } else {
+          write_to_socket(newsockfd, strlen("FAILURE"), "FAILURE");
+        }
+        
+      } else {
+        // send_file(newsockfd, read_from_socket(newsockfd));
+      }
+
     } else { // handle the parent fork
       close(newsockfd);
     }

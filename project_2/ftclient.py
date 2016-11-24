@@ -1,5 +1,25 @@
 import socket
 import sys
+MAX_MESSAGE_LENGTH = 2048
+
+def get_directory_listing(socket):
+	try:
+		while(1):
+			reply = socket.recv(MAX_MESSAGE_LENGTH)
+			if "200 SUCCESS" in reply:
+				print(reply.replace("200 SUCCESS", ""))
+				return 0
+			else:
+				sys.stdout.write(reply)
+				sys.stdout.flush()
+	except:
+		return 1
+
+
+def get_file(socket):
+	print("GET")
+	socket.close()
+
 
 def main():
 	if(len(sys.argv) < 4):
@@ -7,13 +27,32 @@ def main():
 		sys.exit()
 
 	HOST = sys.argv[1] if len(sys.argv) > 0 else "localhost"
-	SERVER_PORT = int(sys.argv[2] if len(sys.argv) > 1 else 31111)
+	COMMAND_PORT = int(sys.argv[2] if len(sys.argv) > 1 else 31111)
 	COMMAND = sys.argv[3] if len(sys.argv) > 2 else "-l"
-	CLIENT_PORT = int(sys.argv[4] if len(sys.argv) > 3 else 31112)
+	if(COMMAND == "-g"):
+		FILE_NAME = sys.argv[4]
+		DATA_PORT = int(sys.argv[5])
+	else:
+		DATA_PORT = int(sys.argv[4])
 
-	print("HOST: {0} S_PORT: {1} COMMAND: {2} C_PORT: {3}".format(HOST, SERVER_PORT, COMMAND, CLIENT_PORT))
+	command_socket = socket.create_connection((HOST, COMMAND_PORT))
 
-	# server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	if COMMAND == "-l":
+		command_socket.sendall(COMMAND)
+		got_directory_listing = get_directory_listing(command_socket) == 0
+		if(got_directory_listing):
+			command_socket.close()
+			sys.exit(0)
+		else:
+			print("Error getting directory listing")
+			sys.exit(0)
+
+
+	if COMMAND == "-g":
+		get_file(command_socket)
+		sys.exit(0)
+
+
 	# server.bind((HOST, PORT))
 	# server.listen(1)
 	# loop_counter = 0;
