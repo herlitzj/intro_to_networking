@@ -9,6 +9,9 @@
 #define USAGE "ftServer [server port]"
 #define MAX_MESSAGE_LENGTH 2048
 #define BACKLOG 10
+#define SUCCESS "200 SUCCESS"
+#define FILE_NOT_FOUND "400 FILE NOT FOUND"
+#define INTERNAL_ERROR "500 INTERNAL ERROR"
 
 // general error function
 void error(const char *msg) {
@@ -43,11 +46,9 @@ int send_directory_listing(int socket) {
   if (dp != NULL)
   {
     while (ep = readdir (dp)) {
-      // puts (ep->d_name);
       char *temp_buffer = malloc(sizeof (char) *MAX_MESSAGE_LENGTH);
       temp_buffer = strcat(ep->d_name, "\n");
       write_to_socket(socket, strlen(temp_buffer), temp_buffer);
-      // write_to_socket(socket, strlen("\n"), "\n");
     }
 
     (void) closedir (dp);
@@ -55,14 +56,26 @@ int send_directory_listing(int socket) {
   }
   else
     return 1;
-    // error("Couldn't open the directory");
 }
 
-// int send_directory_listing(int socket) {
-//   char buffer[MAX_MESSAGE_LENGTH];
-//   get_directory_listing(buffer);
-//   return 0;
-// }
+int send_file(int socket, char *file_name) {
+  FILE * fp;
+  char * line = NULL;
+  size_t len = 0;
+  ssize_t read;
+
+  fp = fopen(file_name, "r");
+  if (fp == NULL)
+    return 1;
+
+  while ((read = getline(&line, &len, fp)) != -1) {
+    printf("Retrieved line of length %zu :\n", read);
+    write_to_socket(socket, strlen(line), line);
+  }
+
+  fclose(fp);
+  return 0;
+}
 
 int main(int argc, char *argv[]) {
   pid_t pid, wpid;
@@ -101,18 +114,29 @@ int main(int argc, char *argv[]) {
       error("Error forking child process");
     } else if (pid == 0) { // handle the child fork
 
-      printf("SOMEONE CONNECTED\n");
-
       if(strcmp(read_from_socket(newsockfd), "-l") == 0) {
+
+        printf("Sending directory listing...\n");
         
         if(send_directory_listing(newsockfd) == 0) {
-          write_to_socket(newsockfd, strlen("200 SUCCESS"), "200 SUCCESS");
+          write_to_socket(newsockfd, strlen(SUCCESS), SUCCESS);
         } else {
-          write_to_socket(newsockfd, strlen("FAILURE"), "FAILURE");
+          write_to_socket(newsockfd, strlen(INTERNAL_ERROR), INTERNAL_ERROR);
         }
-        
+
       } else {
-        // send_file(newsockfd, read_from_socket(newsockfd));
+
+        printf("Sending file...\n");
+
+        write_to_socket(newsockfd, strlen(SUCCESS), SUCCESS);
+        int send_status = send_file(newsockfd, read_from_socket(newsockfd));
+
+        if(send_status == 0) {
+          write_to_socket(newsockfd, strlen(SUCCESS), SUCCESS);
+        } else if(send_status == 1) {
+          write_to_socket(newsockfd, strlen(FILE_NOT_FOUND), FILE_NOT_FOUND);
+        }
+
       }
 
     } else { // handle the parent fork
