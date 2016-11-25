@@ -39,8 +39,6 @@ def get_file(socket, file_name):
 		else:
 			with open(local_file_name, "a") as file:
 				file.write(reply);
-			# sys.stdout.write(reply)
-			# sys.stdout.flush()
 
 
 def main():
@@ -75,10 +73,16 @@ def main():
 		command_socket.sendall(COMMAND)
 		if("200" in command_socket.recv(MAX_MESSAGE_LENGTH)):
 			print("OK TO SEND FILENAME")
-			command_socket.sendall(FILE_NAME)
+			command_socket.sendall("{0}|{1}".format(FILE_NAME, DATA_PORT))
 			got_file = get_file(command_socket, FILE_NAME)
-			command_socket.close()
-			sys.exit(0)
+			if got_file == 0:
+				print("GOT IT")
+				command_socket.close()
+				sys.exit(0)
+			else:
+				print("DIDNT GET IT")
+				command_socket.close()
+				sys.exit(0)
 		else:
 			print("DIDNT WORK")
 			command_socket.close()

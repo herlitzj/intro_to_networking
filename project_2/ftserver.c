@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
   status = listen(sockfd, BACKLOG);
   
   if(status == -1) error("Error listening for connections.");
-  printf("Waiting for connections...\n");
+  printf("Server open on %d\n", portno);
   
   while(1) {
     clilen = sizeof(cli_addr);
@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
     if (newsockfd < 0) error("ERROR on accept");
 
 
-    if((pid = fork()) < 0) { // handle and error forking
+    if((pid = fork()) < 0) { // handle process and error forking
       error("Error forking child process");
     } else if (pid == 0) { // handle the child fork
 
@@ -129,7 +129,13 @@ int main(int argc, char *argv[]) {
         printf("Sending file...\n");
 
         write_to_socket(newsockfd, strlen(SUCCESS), SUCCESS);
-        int send_status = send_file(newsockfd, read_from_socket(newsockfd));
+        char *file_and_port = read_from_socket(newsockfd);
+        char *file_name = strtok(file_and_port, "|");
+        char *data_port = strtok(NULL, "|");
+        printf("file: %s\n", file_name);
+        printf("port: %s\n", data_port);
+
+        int send_status = send_file(newsockfd, file_name);
 
         if(send_status == 0) {
           write_to_socket(newsockfd, strlen(SUCCESS), SUCCESS);
