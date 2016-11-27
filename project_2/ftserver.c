@@ -15,7 +15,6 @@
 
 // general error function
 void error(const char *msg) {
-  printf("Client: ");
   printf("%s\n", msg);
   exit(1);
 }
@@ -27,7 +26,7 @@ char *read_from_socket(int socket) {
 
   result = recv(socket, temp_buffer, MAX_MESSAGE_LENGTH, 0);
   if(result > 1) return temp_buffer;
-  else if(result == 0) error("Connection closed by server");
+  else if(result == 0) error("Connection closed");
   else error("Error reading from socket");
 }
 
@@ -38,6 +37,7 @@ int write_to_socket(int socket, unsigned int message_length, void* message) {
   return result;
 }
 
+// function to send the directory listing to the socket
 int send_directory_listing(int socket) {
   DIR *dp;
   struct dirent *ep;     
@@ -58,6 +58,7 @@ int send_directory_listing(int socket) {
     return 1;
 }
 
+// function to send a file through the socket
 int send_file(int socket, char *file_name) {
   FILE * fp;
   char * line = NULL;
@@ -69,7 +70,6 @@ int send_file(int socket, char *file_name) {
     return 1;
 
   while ((read = getline(&line, &len, fp)) != -1) {
-    printf("Retrieved line of length %zu :\n", read);
     write_to_socket(socket, strlen(line), line);
   }
 
@@ -104,6 +104,8 @@ int main(int argc, char *argv[]) {
   if(status == -1) error("Error listening for connections.");
   printf("Server open on %d\n", portno);
   
+
+  // loop for running ths server. Forks off children to deal with connections
   while(1) {
     clilen = sizeof(cli_addr);
     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
@@ -114,7 +116,7 @@ int main(int argc, char *argv[]) {
       error("Error forking child process");
     } else if (pid == 0) { // handle the child fork
 
-      if(strcmp(read_from_socket(newsockfd), "-l") == 0) {
+      if(strcmp(read_from_socket(newsockfd), "-l") == 0) { // if it sees a "-l" it sends the directory listing
 
         printf("Sending directory listing...\n");
         
@@ -124,16 +126,13 @@ int main(int argc, char *argv[]) {
           write_to_socket(newsockfd, strlen(INTERNAL_ERROR), INTERNAL_ERROR);
         }
 
-      } else {
-
-        printf("Sending file...\n");
+      } else { // otherwise it sends the file (or an error if the file isn't found)
 
         write_to_socket(newsockfd, strlen(SUCCESS), SUCCESS);
         char *file_and_port = read_from_socket(newsockfd);
         char *file_name = strtok(file_and_port, "|");
         char *data_port = strtok(NULL, "|");
-        printf("file: %s\n", file_name);
-        printf("port: %s\n", data_port);
+        printf("Sending file %s on port %s\n", file_name, data_port);
 
         int send_status = send_file(newsockfd, file_name);
 
